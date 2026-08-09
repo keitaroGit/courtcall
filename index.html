@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Court Call</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=JetBrains+Mono:wght@400;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #10151b;
+    --surface: #171e26;
+    --line: #2a333d;
+    --ball: #d9f04b;
+    --ball-dim: #a7b93a;
+    --ink: #f5f7f2;
+    --muted: #7c8a97;
+  }
+  *{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html,body{ height:100%; margin:0; }
+  body{
+    background: radial-gradient(ellipse at 50% -10%, #1a222b 0%, var(--bg) 55%);
+    color: var(--ink);
+    font-family: 'Inter', sans-serif;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding: 32px 20px;
+    text-align:center;
+  }
+  .brand{
+    font-family:'Anton', sans-serif;
+    font-size: min(16vw, 64px);
+    letter-spacing: 0.02em;
+    margin: 0 0 6px;
+    -webkit-text-stroke: 1px var(--ink);
+  }
+  .brand span{ color: var(--ball); -webkit-text-stroke-color: var(--ball); }
+  .tagline{
+    font-family:'JetBrains Mono', monospace;
+    font-size: 12px; letter-spacing:0.08em; color: var(--muted);
+    margin: 0 0 40px; text-transform:uppercase;
+  }
+  .sports{
+    display:flex; flex-direction:column; gap:14px;
+    width:100%; max-width: 360px;
+  }
+  .sport-card{
+    display:flex; align-items:center; justify-content:space-between;
+    background: var(--surface); border:1px solid var(--line); border-radius: 14px;
+    padding: 18px 22px;
+    text-decoration:none; color: var(--ink);
+    transition: border-color .15s ease, transform .1s ease;
+  }
+  .sport-card:active{ transform: scale(0.98); border-color: var(--ball-dim); }
+  .sport-name{ font-family:'Inter'; font-weight:700; font-size:18px; text-align:left; }
+  .sport-sub{ font-family:'JetBrains Mono', monospace; font-size:11px; color: var(--muted); margin-top:3px; }
+  .arrow{ color: var(--ball); font-size:20px; flex-shrink:0; }
+  .soon{ opacity:0.45; }
+  .soon .arrow{ color: var(--muted); }
+  footer{
+    margin-top:48px;
+    font-family:'JetBrains Mono', monospace; font-size:10px; color: var(--muted);
+    letter-spacing:0.05em;
+  }
+</style>
+</head>
+<body>
+  <div class="brand">COURT <span>CALL</span></div>
+  <div class="tagline">Hands-free scoring, called out loud</div>
+
+  <div class="sports">
+    <a class="sport-card" href="./tennis/">
+      <div>
+        <div class="sport-name">Tennis</div>
+        <div class="sport-sub">Games · Sets · Tiebreak</div>
+      </div>
+      <div class="arrow">→</div>
+    </a>
+
+    <a class="sport-card" href="./pickleball/">
+      <div>
+        <div class="sport-name">Pickleball</div>
+        <div class="sport-sub">Singles · Doubles · Side-out scoring</div>
+      </div>
+      <div class="arrow">→</div>
+    </a>
+
+    <div class="sport-card soon">
+      <div>
+        <div class="sport-name">Table Tennis</div>
+        <div class="sport-sub">Coming soon</div>
+      </div>
+      <div class="arrow">→</div>
+    </div>
+
+    <div class="sport-card soon">
+      <div>
+        <div class="sport-name">Golf</div>
+        <div class="sport-sub">Coming soon</div>
+      </div>
+      <div class="arrow">→</div>
+    </div>
+  </div>
+
+  <footer>COURT CALL · v1.0</footer>
+</body>
+</html>
