@@ -142,7 +142,7 @@
 
   .footer{
     position:relative; z-index:1;
-    display:flex; align-items:center; justify-content:space-between;
+    display:flex; align-items:center; justify-space-between;
     padding: 0 18px max(18px, env(safe-area-inset-bottom));
     font-family:'JetBrains Mono', monospace; font-size:11px; color: var(--muted);
     flex-wrap: wrap;
@@ -480,7 +480,6 @@
   }
 
   function renderSetTable(){
-    // Number of set columns to show: completed sets + the current in-progress one.
     const maxSets = config.setsToWin * 2 - 1;
     const completed = state.setHistory.length;
     const colCount = Math.min(maxSets, Math.max(completed + 1, 1));
@@ -574,12 +573,12 @@
 
     const setWon = (g1>=target || g2>=target) && Math.abs(g1-g2) >= 2;
     if(setWon){
-      finishSet(g1 > g2 ? 1 : 2); // finishSet toggles server once
+      finishSet(g1 > g2 ? 1 : 2);
       return;
     }
 
     if(config.tiebreakEnabled && g1===target && g2===target){
-      state.server = state.server === 1 ? 2 : 1; // first serve of the breaker
+      state.server = state.server === 1 ? 2 : 1;
       startTiebreak();
       return;
     }
@@ -737,13 +736,8 @@
   el.resetBtn.addEventListener('mouseleave', endHold);
   el.resetBtn.addEventListener('touchend', endHold);
 
-  // BLE clicker input: physical button sends Spacebar via BLE HID keyboard.
-  // 1 press = point for Player 1, 2 presses within DOUBLE_PRESS_MS = point for Player 2.
-  const DOUBLE_PRESS_MS = 1000;
+  // BLE clicker input
   let bleSeen = false;
-  let pendingSingleTimer = null;
-  let pressCount = 0;
-
   function markBleOk(){
     if(!bleSeen){
       bleSeen = true;
@@ -751,44 +745,35 @@
     }
   }
 
+  // リモコンからの直接キー判定（Space = P1, '2' = P2, 'u' = Undo）
   document.addEventListener('keydown', (e)=>{
     if(document.activeElement && document.activeElement.tagName === 'INPUT') return;
-    if(e.code !== 'Space' && e.key !== ' ') return;
-    e.preventDefault();
-    markBleOk();
 
-    pressCount++;
-    if(pressCount === 1){
-      pendingSingleTimer = setTimeout(()=>{
-        addPoint(1);
-        pressCount = 0;
-      }, DOUBLE_PRESS_MS);
-    } else if(pressCount >= 2){
-      clearTimeout(pendingSingleTimer);
+    // 1回タップ（マイコンから Space 送信） -> P1 加算
+    if(e.code === 'Space' || e.key === ' '){
+      e.preventDefault();
+      markBleOk();
+      addPoint(1);
+    }
+    // 2回タップ（マイコンから '2' 送信） -> P2 加算
+    else if(e.key === '2' || e.code === 'Digit2' || e.code === 'Numpad2'){
+      e.preventDefault();
+      markBleOk();
       addPoint(2);
-      pressCount = 0;
+    }
+    // 長押し（マイコンから 'u' 送信） -> Undo
+    else if(e.key === 'u' || e.key === 'U' || e.code === 'KeyU'){
+      e.preventDefault();
+      markBleOk();
+      undo();
     }
   });
 
-  // Long-press on the physical clicker sends 'u' (from the firmware) -> Undo
-  document.addEventListener('keydown', (e)=>{
-    if(document.activeElement && document.activeElement.tagName === 'INPUT') return;
-    if(e.key !== 'u' && e.key !== 'U') return;
-    e.preventDefault();
-    markBleOk();
-    undo();
-  });
-
   el.helpBtn.addEventListener('click', ()=>{
-    showToast('Button = your point / Tap right side = opponent point');
+    showToast('Button 1x = P1 pt / 2x = P2 pt / Hold = Undo');
   });
 
-  // Screen Wake Lock: keep the screen on while this app is in front.
-  // Note: this only prevents the screen from sleeping while the app is open;
-  // it cannot wake an already-locked/sleeping phone from a BLE button press.
-  // Falls back to a silent looping video (a common workaround) if the
-  // Wake Lock API is unavailable, e.g. when the page is opened as a local
-  // file instead of over https.
+  // Screen Wake Lock
   let wakeLock = null;
   let wakeLockTried = false;
   const noSleepVideo = document.getElementById('noSleepVideo');
@@ -807,7 +792,6 @@
       wakeLock = await navigator.wakeLock.request('screen');
       if(!wakeLockTried){ wakeLockTried = true; showToast('Screen will stay on while app is open'); }
       wakeLock.addEventListener('release', ()=>{
-        // Re-acquire if the tab is still visible (lock can be released by the OS)
         if(document.visibilityState === 'visible') requestWakeLock();
       });
     }catch(e){
@@ -824,8 +808,7 @@
   });
   document.addEventListener('pointerdown', ()=>{ requestWakeLock(); startVideoFallback(); }, {once:true});
 
-  // iOS Safari requires speechSynthesis to be unlocked by a direct user
-  // gesture before later (e.g. setTimeout-triggered) speech will play.
+  // Audio unlock for mobile browsers
   let audioUnlocked = false;
   function unlockAudioOnce(){
     if(audioUnlocked) return;
