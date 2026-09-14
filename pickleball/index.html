@@ -79,6 +79,10 @@
     font-family:'Inter'; font-weight:600; font-size:13px;
     padding:0;
   }
+  .sb-hint{
+    font-family:'JetBrains Mono', monospace; font-size:9px; color: var(--muted);
+    letter-spacing:0.02em;
+  }
   .sb-server-num{
     font-family:'JetBrains Mono', monospace; font-size:9px;
     color:#10151b; background: var(--ball);
@@ -249,6 +253,7 @@
       <span class="sb-serve" id="serve1">●</span>
       <div class="sb-name-block">
         <input class="sb-name-input" id="p1Name" value="Team A" maxlength="14">
+        <span class="sb-hint" id="hint1"></span>
         <span class="sb-server-num" id="serverNum1">SERVER 1</span>
       </div>
       <div class="sb-counts">
@@ -261,6 +266,7 @@
       <span class="sb-serve" id="serve2">●</span>
       <div class="sb-name-block">
         <input class="sb-name-input" id="p2Name" value="Team B" maxlength="14">
+        <span class="sb-hint" id="hint2"></span>
         <span class="sb-server-num" id="serverNum2">SERVER 1</span>
       </div>
       <div class="sb-counts">
@@ -413,6 +419,8 @@
     serve2: document.getElementById('serve2'),
     serverNum1: document.getElementById('serverNum1'),
     serverNum2: document.getElementById('serverNum2'),
+    hint1: document.getElementById('hint1'),
+    hint2: document.getElementById('hint2'),
     sbGamesCount1: document.getElementById('sbGamesCount1'),
     sbGamesCount2: document.getElementById('sbGamesCount2'),
     sbHistory1: document.getElementById('sbHistory1'),
@@ -602,6 +610,14 @@
     el.serverNum2.classList.toggle('show', showServerNum && state.servingTeam === 2);
     el.serverNum1.textContent = 'SERVER ' + state.serverNumber;
     el.serverNum2.textContent = 'SERVER ' + state.serverNumber;
+
+    if(state.servingTeam === 1){
+      el.hint1.textContent = '1× press = point';
+      el.hint2.textContent = '2× press = side out';
+    } else {
+      el.hint1.textContent = '2× press = side out';
+      el.hint2.textContent = '1× press = point';
+    }
 
     el.sbGamesCount1.textContent = state.gamesWon1;
     el.sbGamesCount2.textContent = state.gamesWon2;
