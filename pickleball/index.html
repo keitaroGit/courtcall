@@ -46,19 +46,21 @@
 
   .scoreboard{
     position:relative; z-index:1;
-    margin: 4px auto 0;
-    max-width: 340px;
-    width: calc(100% - 32px);
-    background: var(--surface);
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    overflow: hidden;
+    margin: 4px 16px 0;
+    display:grid;
+    grid-template-columns: 1fr 30px 1fr;
+    align-items:stretch;
   }
-  .sb-row{
+  .sb-divider{ display:flex; justify-content:center; }
+  .sb-divider-line{ width:1px; background: var(--line); align-self:stretch; }
+  .sb-box{
     display:flex; align-items:center; gap:8px;
     padding: 7px 10px;
+    background: var(--surface);
+    border: 1px solid var(--line);
   }
-  .sb-row + .sb-row{ border-top: 1px solid var(--line); }
+  .sb-box.left{ border-radius: 10px 0 0 10px; border-right:none; }
+  .sb-box.right{ border-radius: 0 10px 10px 0; border-left:none; }
   .sb-serve{
     width:12px; flex-shrink:0; text-align:center;
     color: var(--ball); font-size:10px; opacity:0;
@@ -70,23 +72,33 @@
   @keyframes servePulseText{
     0%,100%{ opacity:1; } 50%{ opacity:0.35; }
   }
+  .sb-name-block{ flex:1; min-width:0; display:flex; flex-direction:column; gap:1px; }
   .sb-name-input{
-    flex:1; min-width:0;
+    width:100%;
     background:none; border:none; color: var(--ink);
     font-family:'Inter'; font-weight:600; font-size:13px;
     padding:0;
   }
   .sb-server-num{
-    font-family:'JetBrains Mono', monospace; font-size:11px;
+    font-family:'JetBrains Mono', monospace; font-size:9px;
     color:#10151b; background: var(--ball);
-    width:16px; height:16px; border-radius:4px;
-    display:none; align-items:center; justify-content:center;
-    font-weight:700; flex-shrink:0;
+    padding: 1px 4px; border-radius:4px;
+    display:none; font-weight:700; width:fit-content;
   }
-  .sb-server-num.show{ display:flex; }
-  .sb-games{
-    font-family:'JetBrains Mono', monospace; font-size:13px; color: var(--muted);
+  .sb-server-num.show{ display:block; }
+  .sb-counts{ display:flex; align-items:center; gap:8px; flex-shrink:0; }
+  .sb-games-label{
+    font-family:'JetBrains Mono', monospace; font-size:10px; color: var(--muted);
+    display:flex; flex-direction:column; align-items:center; gap:1px;
+  }
+  .sb-games-label b{ color: var(--ball-dim); font-size:12px; }
+  .sb-history{ display:flex; gap:3px; }
+  .sb-history .histcol{
     min-width:20px; text-align:center;
+    font-family:'JetBrains Mono', monospace; font-size:10px;
+    color: var(--muted);
+    padding: 2px 3px; border-radius:5px;
+    background: var(--bg);
   }
 
   main{
@@ -215,7 +227,7 @@
   @media (orientation: landscape) and (max-height: 500px){
     header{ padding: max(6px, env(safe-area-inset-top)) 16px 2px; }
     .scoreboard{ margin: 2px 16px 0; }
-    .sb-row{ padding: 4px 10px; }
+    .sb-box{ padding: 4px 10px; }
     .sb-name-input{ font-size:11px; }
     .controls-row{ padding: 2px 24px 4px; }
     .footer{ padding: 0 18px max(8px, env(safe-area-inset-bottom)); font-size:10px; }
@@ -233,17 +245,28 @@
   </header>
 
   <div class="scoreboard">
-    <div class="sb-row">
+    <div class="sb-box left">
       <span class="sb-serve" id="serve1">●</span>
-      <input class="sb-name-input" id="p1Name" value="Team A" maxlength="14">
-      <span class="sb-server-num" id="serverNum1">1</span>
-      <span class="sb-games" id="sbGames1">0</span>
+      <div class="sb-name-block">
+        <input class="sb-name-input" id="p1Name" value="Team A" maxlength="14">
+        <span class="sb-server-num" id="serverNum1">SERVER 1</span>
+      </div>
+      <div class="sb-counts">
+        <div class="sb-games-label"><b id="sbGamesCount1">0</b>GAMES</div>
+        <div class="sb-history" id="sbHistory1"></div>
+      </div>
     </div>
-    <div class="sb-row">
+    <div class="sb-divider"><div class="sb-divider-line"></div></div>
+    <div class="sb-box right">
       <span class="sb-serve" id="serve2">●</span>
-      <input class="sb-name-input" id="p2Name" value="Team B" maxlength="14">
-      <span class="sb-server-num" id="serverNum2">1</span>
-      <span class="sb-games" id="sbGames2">0</span>
+      <div class="sb-name-block">
+        <input class="sb-name-input" id="p2Name" value="Team B" maxlength="14">
+        <span class="sb-server-num" id="serverNum2">SERVER 1</span>
+      </div>
+      <div class="sb-counts">
+        <div class="sb-games-label"><b id="sbGamesCount2">0</b>GAMES</div>
+        <div class="sb-history" id="sbHistory2"></div>
+      </div>
     </div>
   </div>
 
@@ -272,7 +295,7 @@
   </main>
 
   <div class="controls-row">
-    <button class="undo-btn" id="undo1">↺ UNDO</button>
+    <button class="undo-btn" id="undo1">↺ UNDO (hold button)</button>
   </div>
 
   <div class="footer">
@@ -303,12 +326,25 @@
       </div>
 
       <div class="field">
-        <label>POINTS TO WIN</label>
+        <label>MATCH LENGTH (games to win)</label>
+        <div class="seg" id="matchLenSeg">
+          <button data-games="1">1 Game</button>
+          <button data-games="2">Best of 3</button>
+          <button data-games="3">Best of 5</button>
+          <button data-games="custom">Custom</button>
+        </div>
+        <input class="num-input" id="customGamesInput" type="number" min="1" max="9" value="1" style="margin-top:8px; display:none;">
+      </div>
+
+      <div class="field">
+        <label>POINTS PER GAME (first to)</label>
         <div class="seg" id="pointsSeg">
           <button data-points="11">11</button>
           <button data-points="15">15</button>
           <button data-points="21">21</button>
+          <button data-points="custom">Custom</button>
         </div>
+        <input class="num-input" id="customPointsInput" type="number" min="3" max="25" value="11" style="margin-top:8px; display:none;">
       </div>
 
       <div class="field row-between">
@@ -337,15 +373,20 @@
 (function(){
   const config = {
     format: 'singles',      // 'singles' or 'doubles'
+    gamesToWin: 1,           // games needed to win the match (1 = single game)
+    gamesToWinCustom: false,
     pointsToWin: 11,
+    pointsToWinCustom: false,
     winByTwo: true
   };
 
   const state = {
     score1: 0, score2: 0,
+    gamesWon1: 0, gamesWon2: 0,
+    gameHistory: [], // completed games: [{s1,s2}, ...]
     servingTeam: 1,
-    serverNumber: 1,        // relevant in doubles: 1 or 2
-    firstServiceUsed: false,// doubles-only special first-serve-of-game rule
+    serverNumber: 1,
+    firstServiceUsed: false,
     ttsOn: false,
     selectedVoiceURI: null,
     history: [],
@@ -361,8 +402,10 @@
     serve2: document.getElementById('serve2'),
     serverNum1: document.getElementById('serverNum1'),
     serverNum2: document.getElementById('serverNum2'),
-    sbGames1: document.getElementById('sbGames1'),
-    sbGames2: document.getElementById('sbGames2'),
+    sbGamesCount1: document.getElementById('sbGamesCount1'),
+    sbGamesCount2: document.getElementById('sbGamesCount2'),
+    sbHistory1: document.getElementById('sbHistory1'),
+    sbHistory2: document.getElementById('sbHistory2'),
     p1Name: document.getElementById('p1Name'),
     p2Name: document.getElementById('p2Name'),
     undo1: document.getElementById('undo1'),
@@ -375,7 +418,10 @@
     settingsOverlay: document.getElementById('settingsOverlay'),
     settingsClose: document.getElementById('settingsClose'),
     formatSeg: document.getElementById('formatSeg'),
+    matchLenSeg: document.getElementById('matchLenSeg'),
+    customGamesInput: document.getElementById('customGamesInput'),
     pointsSeg: document.getElementById('pointsSeg'),
+    customPointsInput: document.getElementById('customPointsInput'),
     winByTwoSwitch: document.getElementById('winByTwoSwitch'),
     serverSeg: document.getElementById('serverSeg'),
     voiceSelect: document.getElementById('voiceSelect')
@@ -385,9 +431,47 @@
     return [el.p1Name.value || 'Team A', el.p2Name.value || 'Team B'];
   }
 
+  // Persist match + settings to localStorage so switching apps, locking the
+  // phone, or the tab reloading in the background doesn't lose the match.
+  const STORAGE_KEY = 'courtcall_pickleball_v1';
+
+  function saveState(){
+    try{
+      const payload = {
+        config: config,
+        state: {
+          score1: state.score1, score2: state.score2,
+          gamesWon1: state.gamesWon1, gamesWon2: state.gamesWon2,
+          gameHistory: state.gameHistory,
+          servingTeam: state.servingTeam, serverNumber: state.serverNumber,
+          firstServiceUsed: state.firstServiceUsed, matchOver: state.matchOver,
+          ttsOn: state.ttsOn, selectedVoiceURI: state.selectedVoiceURI
+        },
+        names: { p1: el.p1Name.value, p2: el.p2Name.value }
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    }catch(e){ /* storage unavailable - skip */ }
+  }
+
+  function loadState(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw) return;
+      const payload = JSON.parse(raw);
+      if(payload.config) Object.assign(config, payload.config);
+      if(payload.state) Object.assign(state, payload.state);
+      if(payload.names){
+        if(payload.names.p1) el.p1Name.value = payload.names.p1;
+        if(payload.names.p2) el.p2Name.value = payload.names.p2;
+      }
+    }catch(e){ /* corrupt or missing - start fresh */ }
+  }
+
   function pushHistory(){
     state.history.push(JSON.stringify({
       score1: state.score1, score2: state.score2,
+      gamesWon1: state.gamesWon1, gamesWon2: state.gamesWon2,
+      gameHistory: state.gameHistory,
       servingTeam: state.servingTeam, serverNumber: state.serverNumber,
       firstServiceUsed: state.firstServiceUsed, matchOver: state.matchOver
     }));
@@ -432,6 +516,13 @@
     }
   }
 
+  function voiceDisplayLabel(v){
+    const n = v.name.toLowerCase();
+    if(n.includes('female')) return '♀ ' + v.name + ' (' + v.lang + ')';
+    if(n.includes('male'))   return '♂ ' + v.name + ' (' + v.lang + ')';
+    return v.name + ' (' + v.lang + ')';
+  }
+
   function populateVoiceList(){
     if(!('speechSynthesis' in window)) return;
     const voices = window.speechSynthesis.getVoices().filter(v => v.lang && v.lang.toLowerCase().startsWith('en'));
@@ -442,10 +533,14 @@
     autoOpt.value = '';
     autoOpt.textContent = 'Auto (default English voice)';
     el.voiceSelect.appendChild(autoOpt);
-    voices.forEach(v=>{
+
+    const male = voices.filter(v => v.name.toLowerCase().includes('male') && !v.name.toLowerCase().includes('female'));
+    const female = voices.filter(v => v.name.toLowerCase().includes('female'));
+    const other = voices.filter(v => !male.includes(v) && !female.includes(v));
+    [...male, ...female, ...other].forEach(v=>{
       const opt = document.createElement('option');
       opt.value = v.voiceURI;
-      opt.textContent = v.name + ' (' + v.lang + ')';
+      opt.textContent = voiceDisplayLabel(v);
       el.voiceSelect.appendChild(opt);
     });
     el.voiceSelect.value = prev || '';
@@ -453,6 +548,10 @@
   if('speechSynthesis' in window){
     populateVoiceList();
     window.speechSynthesis.onvoiceschanged = populateVoiceList;
+  }
+
+  function initialServerNumber(){
+    return (config.format === 'doubles' && !state.firstServiceUsed) ? 2 : 1;
   }
 
   function currentCallText(){
@@ -476,11 +575,27 @@
     const showServerNum = config.format === 'doubles';
     el.serverNum1.classList.toggle('show', showServerNum && state.servingTeam === 1);
     el.serverNum2.classList.toggle('show', showServerNum && state.servingTeam === 2);
-    el.serverNum1.textContent = state.serverNumber;
-    el.serverNum2.textContent = state.serverNumber;
+    el.serverNum1.textContent = 'SERVER ' + state.serverNumber;
+    el.serverNum2.textContent = 'SERVER ' + state.serverNumber;
 
-    el.sbGames1.textContent = state.score1;
-    el.sbGames2.textContent = state.score2;
+    el.sbGamesCount1.textContent = state.gamesWon1;
+    el.sbGamesCount2.textContent = state.gamesWon2;
+    renderHistory();
+    saveState();
+  }
+
+  function renderHistory(){
+    function buildCols(container, isTeam1){
+      container.innerHTML = '';
+      state.gameHistory.forEach(g=>{
+        const span = document.createElement('span');
+        span.className = 'histcol';
+        span.textContent = isTeam1 ? g.s1 : g.s2;
+        container.appendChild(span);
+      });
+    }
+    buildCols(el.sbHistory1, true);
+    buildCols(el.sbHistory2, false);
   }
 
   function pulse(zoneEl){
@@ -488,13 +603,39 @@
     setTimeout(()=> zoneEl.classList.remove('pulse'), 140);
   }
 
-  function checkMatchWin(){
+  function checkGameWin(){
     const s1 = state.score1, s2 = state.score2;
     const target = config.pointsToWin;
     const leaderReached = s1 >= target || s2 >= target;
     if(!leaderReached) return false;
     if(config.winByTwo && Math.abs(s1 - s2) < 2) return false;
     return true;
+  }
+
+  function finishGame(winner){
+    state.gameHistory.push({s1: state.score1, s2: state.score2});
+    if(winner===1) state.gamesWon1++; else state.gamesWon2++;
+
+    const [n1, n2] = names();
+    const winnerName = winner===1 ? n1 : n2;
+    const winnerGames = winner===1 ? state.gamesWon1 : state.gamesWon2;
+
+    if(winnerGames >= config.gamesToWin){
+      state.matchOver = true;
+      render();
+      showToast(winnerName + ' wins the match!');
+      speak('Game, Match, ' + winnerName);
+      return;
+    }
+
+    // set up the next game
+    state.score1 = 0; state.score2 = 0;
+    state.servingTeam = state.servingTeam === 1 ? 2 : 1;
+    state.firstServiceUsed = false;
+    state.serverNumber = initialServerNumber();
+    render();
+    showToast(winnerName + ' wins the game');
+    speak('Game, ' + winnerName);
   }
 
   // event === 'server' -> serving side won the rally (point)
@@ -507,13 +648,8 @@
       if(state.servingTeam === 1) state.score1++; else state.score2++;
       pulse(state.servingTeam === 1 ? el.zone1 : el.zone2);
 
-      if(checkMatchWin()){
-        state.matchOver = true;
-        const [n1, n2] = names();
-        const winner = state.score1 > state.score2 ? n1 : n2;
-        render();
-        showToast(winner + ' wins the match!');
-        speak('Game, ' + winner);
+      if(checkGameWin()){
+        finishGame(state.score1 > state.score2 ? 1 : 2);
         return;
       }
       render();
@@ -533,7 +669,6 @@
 
     // doubles
     if(!state.firstServiceUsed){
-      // very first service of the game: only one server, immediate side-out
       state.firstServiceUsed = true;
       state.servingTeam = state.servingTeam === 1 ? 2 : 1;
       state.serverNumber = 1;
@@ -574,13 +709,6 @@
     }
   }
 
-  function initialServerNumber(){
-    // Official convention: the very first service of a doubles game is
-    // called as server #2 (the starting team only gets one server before
-    // a potential side-out). Not relevant for singles.
-    return (config.format === 'doubles' && !state.firstServiceUsed) ? 2 : 1;
-  }
-
   el.zone1.addEventListener('click', ()=>{
     handleRally(state.servingTeam === 1 ? 'server' : 'receiver');
   });
@@ -601,20 +729,41 @@
     state.ttsOn = !state.ttsOn;
     el.ttsSwitch.classList.toggle('on', state.ttsOn);
     if(state.ttsOn) speak('Voice on');
+    saveState();
   });
 
   function refreshSettingsUI(){
     [...el.formatSeg.children].forEach(btn=>{
       btn.classList.toggle('active', btn.dataset.format === config.format);
     });
-    [...el.pointsSeg.children].forEach(btn=>{
-      btn.classList.toggle('active', Number(btn.dataset.points) === config.pointsToWin);
+
+    [...el.matchLenSeg.children].forEach(btn=>{
+      if(btn.dataset.games === 'custom'){
+        btn.classList.toggle('active', config.gamesToWinCustom);
+      } else {
+        btn.classList.toggle('active', !config.gamesToWinCustom && Number(btn.dataset.games) === config.gamesToWin);
+      }
     });
+    el.customGamesInput.style.display = config.gamesToWinCustom ? 'block' : 'none';
+    el.customGamesInput.value = config.gamesToWin;
+
+    [...el.pointsSeg.children].forEach(btn=>{
+      if(btn.dataset.points === 'custom'){
+        btn.classList.toggle('active', config.pointsToWinCustom);
+      } else {
+        btn.classList.toggle('active', !config.pointsToWinCustom && Number(btn.dataset.points) === config.pointsToWin);
+      }
+    });
+    el.customPointsInput.style.display = config.pointsToWinCustom ? 'block' : 'none';
+    el.customPointsInput.value = config.pointsToWin;
+
     el.winByTwoSwitch.classList.toggle('on', config.winByTwo);
+
     [...el.serverSeg.children].forEach(btn=>{
       btn.classList.toggle('active', Number(btn.dataset.server) === state.servingTeam);
     });
     el.voiceSelect.value = state.selectedVoiceURI || '';
+    saveState();
   }
   el.settingsBtn.addEventListener('click', ()=>{
     refreshSettingsUI();
@@ -634,15 +783,50 @@
       render();
     });
   });
-  [...el.pointsSeg.children].forEach(btn=>{
+  [...el.matchLenSeg.children].forEach(btn=>{
     btn.addEventListener('click', ()=>{
-      config.pointsToWin = Number(btn.dataset.points);
+      if(btn.dataset.games === 'custom'){
+        config.gamesToWinCustom = true;
+        config.gamesToWin = parseInt(el.customGamesInput.value, 10) || config.gamesToWin;
+      } else {
+        config.gamesToWinCustom = false;
+        config.gamesToWin = Number(btn.dataset.games);
+      }
       refreshSettingsUI();
     });
+  });
+  el.customGamesInput.addEventListener('change', ()=>{
+    let v = parseInt(el.customGamesInput.value, 10);
+    if(isNaN(v) || v < 1) v = 1;
+    if(v > 9) v = 9;
+    el.customGamesInput.value = v;
+    config.gamesToWin = v;
+    saveState();
+  });
+  [...el.pointsSeg.children].forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      if(btn.dataset.points === 'custom'){
+        config.pointsToWinCustom = true;
+        config.pointsToWin = parseInt(el.customPointsInput.value, 10) || config.pointsToWin;
+      } else {
+        config.pointsToWinCustom = false;
+        config.pointsToWin = Number(btn.dataset.points);
+      }
+      refreshSettingsUI();
+    });
+  });
+  el.customPointsInput.addEventListener('change', ()=>{
+    let v = parseInt(el.customPointsInput.value, 10);
+    if(isNaN(v) || v < 3) v = 3;
+    if(v > 25) v = 25;
+    el.customPointsInput.value = v;
+    config.pointsToWin = v;
+    saveState();
   });
   el.winByTwoSwitch.addEventListener('click', ()=>{
     config.winByTwo = !config.winByTwo;
     el.winByTwoSwitch.classList.toggle('on', config.winByTwo);
+    saveState();
   });
   [...el.serverSeg.children].forEach(btn=>{
     btn.addEventListener('click', ()=>{
@@ -655,6 +839,7 @@
   el.voiceSelect.addEventListener('change', ()=>{
     state.selectedVoiceURI = el.voiceSelect.value || null;
     speak('Voice selected');
+    saveState();
   });
 
   // hold-to-reset
@@ -668,8 +853,9 @@
       el.resetFill.style.width = '100%';
     });
     holdTimer = setTimeout(()=>{
-      state.score1=0; state.score2=0;
-      state.firstServiceUsed=false; state.history=[]; state.matchOver=false;
+      state.score1=0; state.score2=0; state.gamesWon1=0; state.gamesWon2=0;
+      state.gameHistory=[]; state.history=[];
+      state.firstServiceUsed=false; state.matchOver=false;
       state.serverNumber = initialServerNumber();
       render();
       showToast('Match reset');
@@ -728,7 +914,7 @@
   });
 
   el.helpBtn.addEventListener('click', ()=>{
-    showToast('Button = server point / Double-press = side out');
+    showToast('Button = server point / Double-press = side out / Hold = Undo');
   });
 
   // Screen Wake Lock + silent-video fallback
@@ -779,6 +965,8 @@
   document.addEventListener('pointerdown', unlockAudioOnce, {once:true});
   document.addEventListener('keydown', unlockAudioOnce, {once:true});
 
+  loadState();
+  el.ttsSwitch.classList.toggle('on', state.ttsOn);
   refreshSettingsUI();
   render();
 })();
