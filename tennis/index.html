@@ -324,7 +324,9 @@
           <button data-sets="1">1 Set</button>
           <button data-sets="2">Best of 3</button>
           <button data-sets="3">Best of 5</button>
+          <button data-sets="custom">Custom</button>
         </div>
+        <input class="num-input" id="customSetsInput" type="number" min="1" max="9" value="2" style="margin-top:8px; display:none;">
       </div>
 
       <div class="field">
@@ -335,6 +337,16 @@
       <div class="field row-between">
         <label style="margin:0;">TIEBREAK AT 6-6 (or set target-target)</label>
         <div class="switch" id="tbSwitch"><div class="knob"></div></div>
+      </div>
+
+      <div class="field">
+        <label>TIEBREAK POINTS (first to)</label>
+        <div class="seg" id="tbPointsSeg">
+          <button data-pts="7">7</button>
+          <button data-pts="10">10</button>
+          <button data-pts="custom">Custom</button>
+        </div>
+        <input class="num-input" id="customTbPointsInput" type="number" min="3" max="21" value="7" style="margin-top:8px; display:none;">
       </div>
 
       <div class="field">
@@ -359,9 +371,12 @@
   const POINT_LABELS = ['Love','15','30','40'];
 
   const config = {
-    setsToWin: 2,        // 1 = single set, 2 = best of 3, 3 = best of 5
+    setsToWin: 2,        // 1 = single set, 2 = best of 3, 3 = best of 5, or any custom number
+    setsToWinCustom: false,
     gamesPerSet: 6,
-    tiebreakEnabled: true
+    tiebreakEnabled: true,
+    tiebreakPoints: 7,
+    tiebreakPointsCustom: false
   };
 
   const state = {
@@ -403,11 +418,50 @@
     settingsOverlay: document.getElementById('settingsOverlay'),
     settingsClose: document.getElementById('settingsClose'),
     formatSeg: document.getElementById('formatSeg'),
+    customSetsInput: document.getElementById('customSetsInput'),
     gamesPerSetInput: document.getElementById('gamesPerSetInput'),
     tbSwitch: document.getElementById('tbSwitch'),
+    tbPointsSeg: document.getElementById('tbPointsSeg'),
+    customTbPointsInput: document.getElementById('customTbPointsInput'),
     serverSeg: document.getElementById('serverSeg'),
     voiceSelect: document.getElementById('voiceSelect')
   };
+
+  // Persist match + settings to localStorage so switching apps, locking the
+  // phone, or the browser tab reloading in the background doesn't lose the
+  // match ("start over"). This is a real website (not a sandboxed artifact),
+  // so localStorage works normally here.
+  const STORAGE_KEY = 'courtcall_tennis_v1';
+
+  function saveState(){
+    try{
+      const payload = {
+        config: config,
+        state: {
+          p1: state.p1, p2: state.p2, games1: state.games1, games2: state.games2,
+          sets1: state.sets1, sets2: state.sets2, setHistory: state.setHistory,
+          server: state.server, tiebreak: state.tiebreak, tb1: state.tb1, tb2: state.tb2,
+          matchOver: state.matchOver, ttsOn: state.ttsOn, selectedVoiceURI: state.selectedVoiceURI
+        },
+        names: { p1: el.p1Name.value, p2: el.p2Name.value }
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    }catch(e){ /* storage unavailable (e.g. private browsing) - just skip */ }
+  }
+
+  function loadState(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw) return;
+      const payload = JSON.parse(raw);
+      if(payload.config) Object.assign(config, payload.config);
+      if(payload.state) Object.assign(state, payload.state);
+      if(payload.names){
+        if(payload.names.p1) el.p1Name.value = payload.names.p1;
+        if(payload.names.p2) el.p2Name.value = payload.names.p2;
+      }
+    }catch(e){ /* corrupt or missing data - start fresh */ }
+  }
 
   function pushHistory(){
     state.history.push(JSON.stringify({
@@ -528,6 +582,7 @@
     el.sbSetsCount2.textContent = state.sets2;
     el.serve1.classList.toggle('active', state.server === 1);
     el.serve2.classList.toggle('active', state.server === 2);
+    saveState();
   }
 
   function renderSetTable(){
@@ -647,7 +702,8 @@
     if(state.tiebreak){
       if(player === 1) state.tb1++; else state.tb2++;
       const t1 = state.tb1, t2 = state.tb2;
-      const tbWon = (t1>=7 || t2>=7) && Math.abs(t1-t2) >= 2;
+      const tbTarget = config.tiebreakPoints;
+      const tbWon = (t1>=tbTarget || t2>=tbTarget) && Math.abs(t1-t2) >= 2;
       render();
       pulse(player===1? el.zone1: el.zone2);
       if(tbWon){
@@ -709,14 +765,33 @@
   // Settings sheet
   function refreshSettingsUI(){
     [...el.formatSeg.children].forEach(btn=>{
-      btn.classList.toggle('active', Number(btn.dataset.sets) === config.setsToWin);
+      if(btn.dataset.sets === 'custom'){
+        btn.classList.toggle('active', config.setsToWinCustom);
+      } else {
+        btn.classList.toggle('active', !config.setsToWinCustom && Number(btn.dataset.sets) === config.setsToWin);
+      }
     });
+    el.customSetsInput.style.display = config.setsToWinCustom ? 'block' : 'none';
+    el.customSetsInput.value = config.setsToWin;
+
     el.gamesPerSetInput.value = config.gamesPerSet;
     el.tbSwitch.classList.toggle('on', config.tiebreakEnabled);
+
+    [...el.tbPointsSeg.children].forEach(btn=>{
+      if(btn.dataset.pts === 'custom'){
+        btn.classList.toggle('active', config.tiebreakPointsCustom);
+      } else {
+        btn.classList.toggle('active', !config.tiebreakPointsCustom && Number(btn.dataset.pts) === config.tiebreakPoints);
+      }
+    });
+    el.customTbPointsInput.style.display = config.tiebreakPointsCustom ? 'block' : 'none';
+    el.customTbPointsInput.value = config.tiebreakPoints;
+
     [...el.serverSeg.children].forEach(btn=>{
       btn.classList.toggle('active', Number(btn.dataset.server) === state.server);
     });
     el.voiceSelect.value = state.selectedVoiceURI || '';
+    saveState();
   }
   el.settingsBtn.addEventListener('click', ()=>{
     refreshSettingsUI();
@@ -730,9 +805,23 @@
   });
   [...el.formatSeg.children].forEach(btn=>{
     btn.addEventListener('click', ()=>{
-      config.setsToWin = Number(btn.dataset.sets);
+      if(btn.dataset.sets === 'custom'){
+        config.setsToWinCustom = true;
+        config.setsToWin = parseInt(el.customSetsInput.value, 10) || config.setsToWin;
+      } else {
+        config.setsToWinCustom = false;
+        config.setsToWin = Number(btn.dataset.sets);
+      }
       refreshSettingsUI();
     });
+  });
+  el.customSetsInput.addEventListener('change', ()=>{
+    let v = parseInt(el.customSetsInput.value, 10);
+    if(isNaN(v) || v < 1) v = 1;
+    if(v > 9) v = 9;
+    el.customSetsInput.value = v;
+    config.setsToWin = v;
+    saveState();
   });
   el.gamesPerSetInput.addEventListener('change', ()=>{
     let v = parseInt(el.gamesPerSetInput.value, 10);
@@ -744,6 +833,27 @@
   el.tbSwitch.addEventListener('click', ()=>{
     config.tiebreakEnabled = !config.tiebreakEnabled;
     el.tbSwitch.classList.toggle('on', config.tiebreakEnabled);
+    saveState();
+  });
+  [...el.tbPointsSeg.children].forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      if(btn.dataset.pts === 'custom'){
+        config.tiebreakPointsCustom = true;
+        config.tiebreakPoints = parseInt(el.customTbPointsInput.value, 10) || config.tiebreakPoints;
+      } else {
+        config.tiebreakPointsCustom = false;
+        config.tiebreakPoints = Number(btn.dataset.pts);
+      }
+      refreshSettingsUI();
+    });
+  });
+  el.customTbPointsInput.addEventListener('change', ()=>{
+    let v = parseInt(el.customTbPointsInput.value, 10);
+    if(isNaN(v) || v < 3) v = 3;
+    if(v > 21) v = 21;
+    el.customTbPointsInput.value = v;
+    config.tiebreakPoints = v;
+    saveState();
   });
   [...el.serverSeg.children].forEach(btn=>{
     btn.addEventListener('click', ()=>{
@@ -872,6 +982,8 @@
   document.addEventListener('pointerdown', unlockAudioOnce, {once:true});
   document.addEventListener('keydown', unlockAudioOnce, {once:true});
 
+  loadState();
+  el.ttsSwitch.classList.toggle('on', state.ttsOn);
   refreshSettingsUI();
   render();
 })();
