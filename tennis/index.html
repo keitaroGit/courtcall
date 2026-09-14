@@ -47,16 +47,22 @@
   .scoreboard{
     position:relative; z-index:1;
     margin: 4px 16px 0;
-    background: var(--surface);
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    overflow: hidden;
+    display:grid;
+    grid-template-columns: 1fr 30px 1fr;
+    align-items:stretch;
   }
-  .sb-row{
+  .sb-divider{
+    display:flex; justify-content:center;
+  }
+  .sb-divider-line{ width:1px; background: var(--line); align-self:stretch; }
+  .sb-box{
     display:flex; align-items:center; gap:8px;
     padding: 7px 10px;
+    background: var(--surface);
+    border: 1px solid var(--line);
   }
-  .sb-row + .sb-row{ border-top: 1px solid var(--line); }
+  .sb-box.left{ border-radius: 10px 0 0 10px; border-right:none; }
+  .sb-box.right{ border-radius: 0 10px 10px 0; border-left:none; }
   .sb-serve{
     width:12px; flex-shrink:0; text-align:center;
     color: var(--ball); font-size:10px; opacity:0;
@@ -193,7 +199,7 @@
   @media (orientation: landscape) and (max-height: 500px){
     header{ padding: max(6px, env(safe-area-inset-top)) 16px 2px; }
     .scoreboard{ margin: 2px 16px 0; }
-    .sb-row{ padding: 4px 10px; }
+    .sb-box{ padding: 4px 10px; }
     .sb-name-input{ font-size:11px; }
     .sb-hint{ display:none; }
     .sb-sets .setcol{ font-size:11px; min-width:18px; }
@@ -245,7 +251,7 @@
   </header>
 
   <div class="scoreboard">
-    <div class="sb-row">
+    <div class="sb-box left">
       <span class="sb-serve" id="serve1">●</span>
       <div class="sb-name-block">
         <input class="sb-name-input" id="p1Name" value="Player 1" maxlength="14">
@@ -256,7 +262,8 @@
         <div class="sb-sets" id="sbSets1"></div>
       </div>
     </div>
-    <div class="sb-row">
+    <div class="sb-divider"><div class="sb-divider-line"></div></div>
+    <div class="sb-box right">
       <span class="sb-serve" id="serve2">●</span>
       <div class="sb-name-block">
         <input class="sb-name-input" id="p2Name" value="Player 2" maxlength="14">
