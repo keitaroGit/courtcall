@@ -366,6 +366,17 @@
     </div>
   </div>
 
+  <div class="overlay" id="resumeOverlay">
+    <div class="sheet">
+      <h3>RESUME MATCH?</h3>
+      <p style="font-size:13px;color:var(--muted);margin:0 0 20px;line-height:1.5;">
+        A previous match from <span id="resumeAgeText">a while</span> ago was found. Continue it, or start a new match?
+      </p>
+      <button class="sheet-close" id="resumeContinueBtn" style="margin-bottom:10px;">CONTINUE PREVIOUS MATCH</button>
+      <button class="sheet-close" id="resumeNewBtn" style="background:var(--surface); color:var(--ink); border:1px solid var(--line);">START NEW MATCH</button>
+    </div>
+  </div>
+
 <script>
 (function(){
   const POINT_LABELS = ['Love','15','30','40'];
@@ -424,7 +435,11 @@
     tbPointsSeg: document.getElementById('tbPointsSeg'),
     customTbPointsInput: document.getElementById('customTbPointsInput'),
     serverSeg: document.getElementById('serverSeg'),
-    voiceSelect: document.getElementById('voiceSelect')
+    voiceSelect: document.getElementById('voiceSelect'),
+    resumeOverlay: document.getElementById('resumeOverlay'),
+    resumeAgeText: document.getElementById('resumeAgeText'),
+    resumeContinueBtn: document.getElementById('resumeContinueBtn'),
+    resumeNewBtn: document.getElementById('resumeNewBtn')
   };
 
   // Persist match + settings to localStorage so switching apps, locking the
@@ -432,10 +447,12 @@
   // match ("start over"). This is a real website (not a sandboxed artifact),
   // so localStorage works normally here.
   const STORAGE_KEY = 'courtcall_tennis_v1';
+  const RESUME_THRESHOLD_MS = 3 * 60 * 60 * 1000; // 3 hours
 
   function saveState(){
     try{
       const payload = {
+        savedAt: Date.now(),
         config: config,
         state: {
           p1: state.p1, p2: state.p2, games1: state.games1, games2: state.games2,
@@ -449,18 +466,26 @@
     }catch(e){ /* storage unavailable (e.g. private browsing) - just skip */ }
   }
 
-  function loadState(){
+  function loadSavedPayload(){
     try{
       const raw = localStorage.getItem(STORAGE_KEY);
-      if(!raw) return;
-      const payload = JSON.parse(raw);
-      if(payload.config) Object.assign(config, payload.config);
-      if(payload.state) Object.assign(state, payload.state);
-      if(payload.names){
-        if(payload.names.p1) el.p1Name.value = payload.names.p1;
-        if(payload.names.p2) el.p2Name.value = payload.names.p2;
-      }
-    }catch(e){ /* corrupt or missing data - start fresh */ }
+      if(!raw) return null;
+      return JSON.parse(raw);
+    }catch(e){ return null; }
+  }
+
+  function hasMatchProgress(s){
+    if(!s) return false;
+    return s.p1>0 || s.p2>0 || s.games1>0 || s.games2>0 || s.sets1>0 || s.sets2>0 || s.matchOver;
+  }
+
+  function formatAge(ms){
+    const hours = Math.round(ms / (60*60*1000));
+    if(hours < 1) return 'less than an hour';
+    if(hours === 1) return '1 hour';
+    if(hours < 48) return hours + ' hours';
+    const days = Math.round(hours/24);
+    return days + (days===1 ? ' day' : ' days');
   }
 
   function pushHistory(){
@@ -982,10 +1007,50 @@
   document.addEventListener('pointerdown', unlockAudioOnce, {once:true});
   document.addEventListener('keydown', unlockAudioOnce, {once:true});
 
-  loadState();
-  el.ttsSwitch.classList.toggle('on', state.ttsOn);
-  refreshSettingsUI();
-  render();
+  let pendingSavedState = null;
+
+  function applyLoadedMatchState(s){
+    Object.assign(state, s);
+    el.ttsSwitch.classList.toggle('on', state.ttsOn);
+    refreshSettingsUI();
+    render();
+  }
+
+  const saved = loadSavedPayload();
+  if(saved){
+    if(saved.config) Object.assign(config, saved.config);
+    if(saved.names){
+      if(saved.names.p1) el.p1Name.value = saved.names.p1;
+      if(saved.names.p2) el.p2Name.value = saved.names.p2;
+    }
+    const age = saved.savedAt ? (Date.now() - saved.savedAt) : Infinity;
+    if(hasMatchProgress(saved.state) && age > RESUME_THRESHOLD_MS){
+      pendingSavedState = saved.state;
+      el.resumeAgeText.textContent = formatAge(age);
+      refreshSettingsUI();
+      render();
+      el.resumeOverlay.classList.add('show');
+    } else if(saved.state){
+      applyLoadedMatchState(saved.state);
+    } else {
+      refreshSettingsUI();
+      render();
+    }
+  } else {
+    refreshSettingsUI();
+    render();
+  }
+
+  el.resumeContinueBtn.addEventListener('click', ()=>{
+    if(pendingSavedState) applyLoadedMatchState(pendingSavedState);
+    pendingSavedState = null;
+    el.resumeOverlay.classList.remove('show');
+  });
+  el.resumeNewBtn.addEventListener('click', ()=>{
+    pendingSavedState = null;
+    el.resumeOverlay.classList.remove('show');
+    saveState();
+  });
 })();
 </script>
 </body>
