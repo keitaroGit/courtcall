@@ -46,9 +46,7 @@
 
   .scoreboard{
     position:relative; z-index:1;
-    margin: 4px auto 0;
-    max-width: 340px;
-    width: calc(100% - 32px);
+    margin: 4px 16px 0;
     background: var(--surface);
     border: 1px solid var(--line);
     border-radius: 10px;
@@ -70,13 +68,24 @@
   @keyframes servePulseText{
     0%,100%{ opacity:1; } 50%{ opacity:0.35; }
   }
+  .sb-name-block{ flex:1; min-width:0; display:flex; flex-direction:column; gap:1px; }
   .sb-name-input{
-    flex:1; min-width:0;
+    width:100%;
     background:none; border:none; color: var(--ink);
     font-family:'Inter'; font-weight:600; font-size:13px;
     padding:0;
   }
-  .sb-sets{ display:flex; gap:3px; flex-shrink:0; }
+  .sb-hint{
+    font-family:'JetBrains Mono', monospace; font-size:9px; color: var(--muted);
+    letter-spacing:0.02em;
+  }
+  .sb-counts{ display:flex; align-items:center; gap:10px; flex-shrink:0; }
+  .sb-sets-label{
+    font-family:'JetBrains Mono', monospace; font-size:10px; color: var(--muted);
+    display:flex; flex-direction:column; align-items:center; gap:1px;
+  }
+  .sb-sets-label b{ color: var(--ball-dim); font-size:12px; }
+  .sb-sets{ display:flex; gap:3px; }
   .sb-sets .setcol{
     min-width:16px; text-align:center;
     font-family:'JetBrains Mono', monospace; font-size:12px;
@@ -186,6 +195,7 @@
     .scoreboard{ margin: 2px 16px 0; }
     .sb-row{ padding: 4px 10px; }
     .sb-name-input{ font-size:11px; }
+    .sb-hint{ display:none; }
     .sb-sets .setcol{ font-size:11px; min-width:18px; }
     .controls-row{ padding: 2px 24px 4px; }
     .footer{ padding: 0 18px max(8px, env(safe-area-inset-bottom)); font-size:10px; }
@@ -203,6 +213,7 @@
     border-radius: 18px 18px 0 0;
     width:100%; max-width:480px; padding: 20px 20px max(20px, env(safe-area-inset-bottom));
     font-family:'Inter', sans-serif;
+    max-height: 80vh; overflow-y:auto;
   }
   .sheet h3{ margin:0 0 16px; font-size:15px; letter-spacing:0.02em; }
   .field{ margin-bottom:16px; }
@@ -236,13 +247,25 @@
   <div class="scoreboard">
     <div class="sb-row">
       <span class="sb-serve" id="serve1">●</span>
-      <input class="sb-name-input" id="p1Name" value="Player 1" maxlength="14">
-      <div class="sb-sets" id="sbSets1"></div>
+      <div class="sb-name-block">
+        <input class="sb-name-input" id="p1Name" value="Player 1" maxlength="14">
+        <span class="sb-hint">1× press to score</span>
+      </div>
+      <div class="sb-counts">
+        <div class="sb-sets-label"><b id="sbSetsCount1">0</b>SETS</div>
+        <div class="sb-sets" id="sbSets1"></div>
+      </div>
     </div>
     <div class="sb-row">
       <span class="sb-serve" id="serve2">●</span>
-      <input class="sb-name-input" id="p2Name" value="Player 2" maxlength="14">
-      <div class="sb-sets" id="sbSets2"></div>
+      <div class="sb-name-block">
+        <input class="sb-name-input" id="p2Name" value="Player 2" maxlength="14">
+        <span class="sb-hint">2× press to score</span>
+      </div>
+      <div class="sb-counts">
+        <div class="sb-sets-label"><b id="sbSetsCount2">0</b>SETS</div>
+        <div class="sb-sets" id="sbSets2"></div>
+      </div>
     </div>
   </div>
 
@@ -266,7 +289,7 @@
   </main>
 
   <div class="controls-row">
-    <button class="undo-btn" id="undo1">↺ UNDO</button>
+    <button class="undo-btn" id="undo1">↺ UNDO (hold button)</button>
   </div>
 
   <div class="footer">
@@ -357,6 +380,8 @@
     zone2: document.getElementById('zone2'),
     sbSets1: document.getElementById('sbSets1'),
     sbSets2: document.getElementById('sbSets2'),
+    sbSetsCount1: document.getElementById('sbSetsCount1'),
+    sbSetsCount2: document.getElementById('sbSetsCount2'),
     serve1: document.getElementById('serve1'),
     serve2: document.getElementById('serve2'),
     p1Name: document.getElementById('p1Name'),
@@ -425,6 +450,17 @@
     }
   }
 
+  // Browsers don't expose voice gender directly, so we infer it from the
+  // voice's own name (many platforms, e.g. Android/Google voices, include
+  // "Male"/"Female" in the name) and label it for easier picking, including
+  // a dedicated "male umpire"-style option when one is available.
+  function voiceDisplayLabel(v){
+    const n = v.name.toLowerCase();
+    if(n.includes('female')) return '♀ ' + v.name + ' (' + v.lang + ')';
+    if(n.includes('male'))   return '♂ ' + v.name + ' (' + v.lang + ')';
+    return v.name + ' (' + v.lang + ')';
+  }
+
   function populateVoiceList(){
     if(!('speechSynthesis' in window)) return;
     const voices = window.speechSynthesis.getVoices().filter(v => v.lang && v.lang.toLowerCase().startsWith('en'));
@@ -435,10 +471,16 @@
     autoOpt.value = '';
     autoOpt.textContent = 'Auto (default English voice)';
     el.voiceSelect.appendChild(autoOpt);
-    voices.forEach(v=>{
+
+    // Male-sounding voices first (so a "male umpire" option is easy to find),
+    // then female, then anything unlabeled.
+    const male = voices.filter(v => v.name.toLowerCase().includes('male') && !v.name.toLowerCase().includes('female'));
+    const female = voices.filter(v => v.name.toLowerCase().includes('female'));
+    const other = voices.filter(v => !male.includes(v) && !female.includes(v));
+    [...male, ...female, ...other].forEach(v=>{
       const opt = document.createElement('option');
       opt.value = v.voiceURI;
-      opt.textContent = v.name + ' (' + v.lang + ')';
+      opt.textContent = voiceDisplayLabel(v);
       el.voiceSelect.appendChild(opt);
     });
     el.voiceSelect.value = prev || '';
@@ -475,6 +517,8 @@
     }
 
     renderSetTable();
+    el.sbSetsCount1.textContent = state.sets1;
+    el.sbSetsCount2.textContent = state.sets2;
     el.serve1.classList.toggle('active', state.server === 1);
     el.serve2.classList.toggle('active', state.server === 2);
   }
@@ -745,23 +789,20 @@
     }
   }
 
-  // リモコンからの直接キー判定（Space = P1, '2' = P2, 'u' = Undo）
+  // 1x press (Space) -> P1, 2x press ('2') -> P2, long-press ('u') -> Undo
   document.addEventListener('keydown', (e)=>{
     if(document.activeElement && document.activeElement.tagName === 'INPUT') return;
 
-    // 1回タップ（マイコンから Space 送信） -> P1 加算
     if(e.code === 'Space' || e.key === ' '){
       e.preventDefault();
       markBleOk();
       addPoint(1);
     }
-    // 2回タップ（マイコンから '2' 送信） -> P2 加算
     else if(e.key === '2' || e.code === 'Digit2' || e.code === 'Numpad2'){
       e.preventDefault();
       markBleOk();
       addPoint(2);
     }
-    // 長押し（マイコンから 'u' 送信） -> Undo
     else if(e.key === 'u' || e.key === 'U' || e.code === 'KeyU'){
       e.preventDefault();
       markBleOk();
