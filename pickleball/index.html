@@ -914,43 +914,20 @@
   el.resetBtn.addEventListener('mouseleave', endHold);
   el.resetBtn.addEventListener('touchend', endHold);
 
-  // BLE clicker: 1 press = server wins rally (point), 2 presses = receiver wins (side out)
-  const DOUBLE_PRESS_MS = 1000;
+  // BLE clicker (firmware counts presses): Space = server wins rally (point), '2' = receiver wins (side out), 'u' = undo
   let bleSeen = false;
-  let pendingSingleTimer = null;
-  let pressCount = 0;
-
   function markBleOk(){
-    if(!bleSeen){
-      bleSeen = true;
-      showToast('Clicker connected');
-    }
+    if(!bleSeen){ bleSeen = true; showToast('Clicker connected'); }
   }
 
   document.addEventListener('keydown', (e)=>{
     if(document.activeElement && document.activeElement.tagName === 'INPUT') return;
-
-    if(e.key === 'u' || e.key === 'U'){
-      e.preventDefault();
-      markBleOk();
-      undo();
-      return;
-    }
-
-    if(e.code !== 'Space' && e.key !== ' ') return;
-    e.preventDefault();
-    markBleOk();
-
-    pressCount++;
-    if(pressCount === 1){
-      pendingSingleTimer = setTimeout(()=>{
-        handleRally('server');
-        pressCount = 0;
-      }, DOUBLE_PRESS_MS);
-    } else if(pressCount >= 2){
-      clearTimeout(pendingSingleTimer);
-      handleRally('receiver');
-      pressCount = 0;
+    if(e.code === 'Space' || e.key === ' '){
+      e.preventDefault(); markBleOk(); handleRally('server');
+    } else if(e.key === '2' || e.code === 'Digit2' || e.code === 'Numpad2'){
+      e.preventDefault(); markBleOk(); handleRally('receiver');
+    } else if(e.key === 'u' || e.key === 'U' || e.code === 'KeyU'){
+      e.preventDefault(); markBleOk(); undo();
     }
   });
 
