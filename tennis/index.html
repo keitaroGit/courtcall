@@ -1052,13 +1052,6 @@
     btn.addEventListener('click', ()=>{
       state.funnyMode = btn.dataset.funny;
       refreshSettingsUI();
-      if(state.funnyMode !== 'off'){
-        if(!state.ttsOn){ showToast('Turn Voice on to hear the funny calls'); }
-        else {
-          const [n1] = names();
-          speak('Funny mode on. ' + n1 + ', will you marry me?');
-        }
-      }
     });
   });
   el.voiceSelect.addEventListener('change', ()=>{
