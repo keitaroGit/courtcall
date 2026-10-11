@@ -367,6 +367,15 @@
       </div>
 
       <div class="field">
+        <label>FUNNY MODE (cheers &amp; hecklers)</label>
+        <div class="seg" id="funnySeg">
+          <button data-funny="off">Off</button>
+          <button data-funny="some">Sometimes</button>
+          <button data-funny="always">Every point</button>
+        </div>
+      </div>
+
+      <div class="field">
         <label>CALLER VOICE</label>
         <select class="num-input" id="voiceSelect"></select>
       </div>
@@ -405,6 +414,7 @@
     serverNumber: 1,
     firstServiceUsed: false,
     ttsOn: false,
+    funnyMode: 'off',
     selectedVoiceURI: null,
     history: [],
     matchOver: false
@@ -470,7 +480,7 @@
           gameHistory: state.gameHistory,
           servingTeam: state.servingTeam, serverNumber: state.serverNumber,
           firstServiceUsed: state.firstServiceUsed, matchOver: state.matchOver,
-          ttsOn: state.ttsOn, selectedVoiceURI: state.selectedVoiceURI
+          ttsOn: state.ttsOn, selectedVoiceURI: state.selectedVoiceURI, funnyMode: state.funnyMode
         },
         names: { p1: el.p1Name.value, p2: el.p2Name.value }
       };
@@ -518,6 +528,145 @@
     showToast._t = setTimeout(()=> el.toast.classList.remove('show'), 1800);
   }
 
+  // ---- Funny mode: random cheers / hecklers after the score call ----
+  const FUNNY_QUIPS = [
+  "{A}, will you marry me?",
+  "{A}, you are my hero!",
+  "Oh my goodness, did you see that?",
+  "Somebody call the highlight reel!",
+  "Is it just me, or is {A} on fire?",
+  "{B}, I believe in you. Mostly.",
+  "Nice shot! Did you practice that in your sleep?",
+  "That ball never stood a chance.",
+  "The crowd goes mild!",
+  "Ladies and gentlemen, {A} has entered the building!",
+  "{A}, my mom would be proud.",
+  "Wow. Just wow.",
+  "Somebody get {B} a towel and a hug.",
+  "{B}, it's okay. Nobody was watching. Except everyone.",
+  "That was smoother than butter on a hot pan.",
+  "Cheers, {A}! Drinks are on {B}!",
+  "Pure poetry in motion!",
+  "{A} is playing like they have a plane to catch.",
+  "I love this game. I love this game so much.",
+  "Was that a shot or a work of art?",
+  "{B}, shake it off. Literally, shake it off.",
+  "Great hustle, {A}!",
+  "The ball sends its regards.",
+  "{A}, call your agent!",
+  "That one is going straight on the fridge.",
+  "Unbelievable. Absolutely unbelievable.",
+  "Hold my water bottle, I need a moment.",
+  "{B}, you're doing great. Sweetie.",
+  "Somebody check {A} for a jetpack!",
+  "Breaking news: {A} is really good at this.",
+  "The ball is filing a complaint.",
+  "{A}, that was just showing off. And I love it.",
+  "Easy, easy, easy!",
+  "Did the court just shake or was that me?",
+  "{B}, take a deep breath and think of pizza.",
+  "Here comes the thunder!",
+  "Bravo! Encore! Again!",
+  "{A}, you make it look so easy.",
+  "That, my friends, was a masterpiece.",
+  "{A} is cooking and the kitchen is hot!",
+  "Somebody alert the neighbors!",
+  "The court is yours, {A}!",
+  "{B}, the comeback starts now. Probably.",
+  "Whoa, whoa, whoa. Slow down, {A}, you're making us look bad.",
+  "That was not a drill!",
+  "Is this the finals? It feels like the finals.",
+  "{A}, you absolute legend!",
+  "Let's go, let's go, let's go!",
+  "{B}, even the net felt that one.",
+  "The ball is dizzy and so am I.",
+  "Somebody give {A} a trophy. Or a sandwich.",
+  "Shots fired. In a friendly way.",
+  "{A}, are you sure you're not a professional?",
+  "I'm not crying, you're crying.",
+  "{B}, we're just warming up. Right? Right?",
+  "Oh, that's how we're doing it today!",
+  "Pure class, {A}.",
+  "That was spicy!",
+  "Mom, look at me, I'm on the court!",
+  "{A}, you had one job and you did it beautifully.",
+  "The crowd is on their feet! Well, the two of us are.",
+  "Somebody sound the trumpets!",
+  "Even the birds stopped to watch that.",
+  "{B}, fear not. There is always the next point.",
+  "{A}, your fan club is now accepting members.",
+  "That, was, glorious.",
+  "You can't teach that. You can only watch it with your mouth open.",
+  "Smooth like jazz!",
+  "Great point! Now pretend it was easy.",
+  "{A}, the ball called. It says you're mean.",
+  "{B}, don't worry, we still love you.",
+  "This is the best day of my life. Next to yesterday.",
+  "Someone call Hollywood, we have a movie here.",
+  "{A}, you sneaky little champion!",
+  "Boom! Nailed it!",
+  "Wait, what just happened? Replay, please!",
+  "That point was brought to you by pure talent.",
+  "{B}, plot twist: you win the next one.",
+  "Absolutely electric!",
+  "If that was practice, I'm scared of the real thing.",
+  "{A} is on a roll, and not the dinner kind.",
+  "Time out! I need a minute to process that.",
+  "Somebody check the ball. It looks exhausted.",
+  "{A}, keep that energy!",
+  "{B}, you got this. Probably. Maybe. Let's see.",
+  "Tell the grandkids about this one.",
+  "Look at that footwork! Is {A} dancing?",
+  "That's what I'm talking about!",
+  "Hey {B}, nice try. Really nice try.",
+  "Ding ding ding! We have a winner of this point!",
+  "I'd pay good money to see that again.",
+  "{A}, you're giving everyone ideas.",
+  "The sun is shining, the ball is flying, life is good.",
+  "Easy peasy, lemon squeezy!",
+  "That shot had a postal code.",
+  "{A}, are you made of rubber? Because that was bouncy!",
+  "{B}, the best is yet to come. Hopefully.",
+  "Applause, applause, applause!",
+  "Hot dog! What a point!",
+  "Careful, {A}, you'll break the sound barrier.",
+  "And the crowd goes wild. Quietly.",
+  "{A}, that was fire. Pure fire.",
+  "Somebody get this player a cape!",
+  "We interrupt this match to say: wow.",
+  "Your fans are going bananas, {A}!",
+  "That's one for the history books.",
+  "Nobody does it like {A}!",
+  "That point was gluten free and 100 percent delicious.",
+  "{B}, remember, it's just a game. A very serious game.",
+  "Oh, you're good. You're really good.",
+  "Whoopee! Another one!",
+  "{A}, I would follow you into battle. Or onto the court.",
+  "Talk about a power move!",
+  "That was definitely not in the script.",
+  "Clap clap clap! Louder, please!",
+  "Say hi to the highlight reel for me!",
+  "{B}, hang in there, champ.",
+  "Ace in my heart, {A}!",
+  "Everybody is talking about that shot.",
+  "Honestly? Chef's kiss."
+];
+  let recentQuips = [];
+  function pickQuip(text){
+    const mode = state.funnyMode || 'off';
+    if(mode === 'off') return null;
+    if(/^(Undo|Voice)/i.test(text)) return null;
+    if(mode === 'some' && Math.random() > 0.35) return null;
+    let idx, tries = 0;
+    do { idx = Math.floor(Math.random() * FUNNY_QUIPS.length); tries++; }
+    while(recentQuips.includes(idx) && tries < 20);
+    recentQuips.push(idx);
+    if(recentQuips.length > 25) recentQuips.shift();
+    const [n1, n2] = names();
+    const pair = Math.random() < 0.5 ? [n1, n2] : [n2, n1];
+    return FUNNY_QUIPS[idx].replace(/\{A\}/g, pair[0]).replace(/\{B\}/g, pair[1]);
+  }
+
   function speak(text){
     if(!state.ttsOn) return;
     if(!('speechSynthesis' in window)){
@@ -540,6 +689,15 @@
       u.rate = 1.0;
       u.onerror = (ev) => showToast('Voice error: ' + (ev.error || 'unknown'));
       window.speechSynthesis.speak(u);
+      const quip = pickQuip(text);
+      if(quip){
+        const u2 = new SpeechSynthesisUtterance(quip);
+        if(chosen){ u2.voice = chosen; u2.lang = chosen.lang; }
+        else { u2.lang = 'en-US'; }
+        u2.rate = 0.95 + Math.random() * 0.2;
+        u2.pitch = 0.8 + Math.random() * 0.6;
+        window.speechSynthesis.speak(u2);
+      }
     };
     const voices = window.speechSynthesis.getVoices();
     if(voices && voices.length){ doSpeak(); }
@@ -803,6 +961,9 @@
     [...el.serverSeg.children].forEach(btn=>{
       btn.classList.toggle('active', Number(btn.dataset.server) === state.servingTeam);
     });
+    [...document.getElementById('funnySeg').children].forEach(btn=>{
+      btn.classList.toggle('active', btn.dataset.funny === (state.funnyMode || 'off'));
+    });
     el.voiceSelect.value = state.selectedVoiceURI || '';
     saveState();
   }
@@ -875,6 +1036,19 @@
       state.serverNumber = initialServerNumber();
       refreshSettingsUI();
       render();
+    });
+  });
+  [...document.getElementById('funnySeg').children].forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      state.funnyMode = btn.dataset.funny;
+      refreshSettingsUI();
+      if(state.funnyMode !== 'off'){
+        if(!state.ttsOn){ showToast('Turn Voice on to hear the funny calls'); }
+        else {
+          const [n1] = names();
+          speak('Funny mode on. ' + n1 + ', will you marry me?');
+        }
+      }
     });
   });
   el.voiceSelect.addEventListener('change', ()=>{
