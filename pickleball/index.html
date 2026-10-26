@@ -1087,8 +1087,19 @@
     if(!bleSeen){ bleSeen = true; showToast('Clicker connected'); }
   }
 
+  // Guard against a "stuck key" from the clicker (lost BLE key-release packet):
+  // the phone auto-repeats the key and scores race up. Ignore OS key-repeat
+  // and any clicker key arriving within MIN_KEY_GAP_MS of the previous one.
+  const MIN_KEY_GAP_MS = 250;
+  let lastKeyAt = 0;
   document.addEventListener('keydown', (e)=>{
     if(document.activeElement && document.activeElement.tagName === 'INPUT') return;
+    if(e.repeat) { e.preventDefault(); return; }
+    if(e.code === 'Space' || e.key === ' ' || e.key === '2' || e.code === 'Digit2' || e.code === 'Numpad2' || e.key === 'u' || e.key === 'U' || e.code === 'KeyU'){
+      const now = Date.now();
+      if(now - lastKeyAt < MIN_KEY_GAP_MS){ e.preventDefault(); return; }
+      lastKeyAt = now;
+    }
     if(e.code === 'Space' || e.key === ' '){
       e.preventDefault(); markBleOk(); handleRally('server');
     } else if(e.key === '2' || e.code === 'Digit2' || e.code === 'Numpad2'){
